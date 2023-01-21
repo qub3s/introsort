@@ -1,27 +1,42 @@
 #include <iostream>
 #include<cstdlib>
 #include<concepts>
+#include <bits/stdc++.h>
+
+#define QUICKSORT_INSERT_LIMIT 16 
+
 using namespace std;
 
 template <typename T>
 concept order = requires (T a, T b) { {a < b}; };
 
-
 // The compareto method has to provide a total order ( wikipedia.org/wiki/Total_order )
+// uses pointers of the elements
 template <typename T>
-bool compareto(T a, T b) requires order<T>{
-    return a < b;
+bool compareto(T* a, T* b) requires order<T>{
+    return *a < *b;
+}
+
+// The swap of 2 Elements
+// pointer on the 2 elemntes
+template <typename T>
+void swap(T* a, T* b) requires order<T>{
+    T temp = *a;
+    *a = *b;
+    *b = temp;
+    return;
 }
 
 // Implemenation of insertionsort
+// pointer, to the start of the list, and to the last element
 template <typename T>
-void insertionsort(T* list, int length)requires order<T>{
+void insertionsort(T* list, T* end)requires order<T>{
     int i = 1;
     T valuetosort;
-    while( i < length ){
+    while( list+i <= end ){
         valuetosort = list[i];
         int j = i;
-        while( j > 0 && list[j-1] > valuetosort ){
+        while( j > 0 && compareto(&valuetosort, &list[j-1]) ){
             list[j] = list[j-1];
             j = j - 1;
         }
@@ -30,66 +45,57 @@ void insertionsort(T* list, int length)requires order<T>{
     }
 }
 
+
 // Implementation of Quicksort-3, on very large lists it might be worth is to replace this with Quicksort-9
 // takes: list pointer; first element (prob 0); length of list -1
+// returns the position of the 
 template <typename T>
-void quicksort3(T* list, int lo, int up){
+T* quicksort3(T* lo, T* up)requires order<T>{
     // ---------------------------------------------------
     // cancel conditions
     if( !( lo < up ) ){
-        return;
+        return NULL;
     }
     
     if( up - lo == 0 ){
-        return;
+        return NULL;
     }
 
     if(up - lo == 1){
-        if( compareto( list[up], list[lo] ) ){
-            T temp = list[lo];
-            list[lo] = list[up];
-            list[up] = temp;
+        if( compareto( up, lo ) ){
+            swap(up,lo);
         }
-        return;
+        return NULL;
     }     
     // ---------------------------------------------------
     // finding the pivot Element ( middle of 3 )
-    T lov = list[lo];
-    T upv = list[up];
-    int miv = lo + ( up - lo )/2;
-    T a = list[miv];
+    int miv = ( up - lo )/2;
     T pivot;
 
-    if( compareto(lov,upv) ){
-        pivot = lov;
+    if( compareto(lo,up) ){
+        pivot = *lo;
     }
     else{
-        pivot = upv;
+        pivot = *up;
     }
 
-    if( compareto(pivot, list[miv] ) ){
-        T temp = list[ miv ];
-        list[ miv ] = list[ up ];
-        list[ up ] = temp;
-        pivot = temp;
+    if( compareto( &pivot, &lo[miv] ) ){
+        pivot = lo[miv];
     }
 
     // ---------------------------------------------------
     // Sort the array
 
-    int le = lo - 1;
-    int ri = up + 1;
-    
+    T* le = lo;
+    T* ri = up;
     while(true){
-        le = le + 1;
         // find element from the left to swap
-        while ( compareto(list[le],pivot) ){
+        while ( compareto(le, &pivot) && le < ri ){
             le = le + 1;
         }
 
-        ri = ri - 1;
         // find element form the right to swap
-        while ( compareto(pivot,list[ri]) ){
+        while ( compareto( &pivot, ri) && le < ri){
             ri = ri - 1;
         }
 
@@ -99,22 +105,83 @@ void quicksort3(T* list, int lo, int up){
         }
 
         // swap the elements
-        T temp = list[ri];
-        list[ri] = list[le];
-        list[le] = temp;
+        swap(ri,le);
+        ri = ri - 1;
+        le = le + 1;
     }
-    // if difference between lo and ri in smaller than x then use insertionsort
+    return ri;
+}
 
-    // check if the restlists are bigger than x
-    quicksort3(list,lo,ri);             // use quicksort on the lower part of the array
-    quicksort3(list,ri+1,up);           // use quicksort on the upper part of the array
-    return;
+
+template <typename T>
+void reheap(T* list, int n, int i)requires order<T>{
+    int largest = i;
+    int l = 2*i + 1;
+    int r = 2*i + 2;
+
+    if (l < n && compareto(list[largest], list[l]) ){
+        largest = l;
     }
 
+    if (r < n && compareto( list[largest], list[r]) ){
+        largest = r;
+    }
+    
+    if (largest != i){
+        T swap = list[i];
+        list[i] = list[largest];
+        list[largest] = swap;
+
+        reheap(list, n, largest);
+    }
+}
 
 // Implementation of Heapsort
 template <typename T>
-void printlist( T* list, int length){
+void heapsort(T* list, int n)requires order<T>{
+    for (int i = n / 2 - 1; i >= 0; i--)
+        reheap(list, n, i);
+
+    for (int i=n-1; i>=0; i--)
+    {
+        T temp = list[0];
+        list[0] = list[i];
+        list[i] = temp;
+
+        reheap(list, i, 0);
+    }
+}
+
+
+template <typename T>
+void introsort(T* lo, T* up)requires order<T>{
+    int heaplimit = 2 * log2(up-lo);
+    introsortrun(lo,up,0,heaplimit);
+
+}
+
+template <typename T>
+void introsortrun(T* lo, T* up,int depth,int heaplimit)requires order<T>{
+    if( (up-lo) < quicksortinsertlimit ){
+        insertionsort(lo, up);
+        return;
+    }
+
+    if( depth > heaplimit ){
+        //heapsort(lo,up-lo);
+        return;
+    }
+
+    T* pivpos = quicksort3(lo,up);
+    if(pivpos != NULL){
+        introsortrun(lo,pivpos,depth+1);
+        introsortrun(pivpos+1,up,depth+1);
+    }
+}
+
+
+template <typename T>
+void printlist(T* list, int length){
     cout << "\n";
     for(int i = 0; i < length; i++){
         cout << list[i] << " ";
@@ -124,18 +191,23 @@ void printlist( T* list, int length){
 
 int main(){
     srand(time(0));
-    int length = 100;
+    int length = 1000;
     double list[length];
+    int check = 1;
 
-    for(int i = 0; i < length; i++){
-        list[i] = rand()%1000+0.5;
+    for(int x = 0; check == 1; x++){
+
+        for(int i = 0; i < length; i++){
+            list[i] = rand()%10000;
+        }
+
+        check = introsort(list,list+length-1,0);
+        if(check == 0){
+            cout << x << "\n\n\n\n\n";
+            printlist(list,length);
+            break;
+        }
     }
-
-    int arr[4]={123,1,2,3};
-    int arr1[4]={0,1,2,3};
-    printlist(list,length);
-    quicksort3(list,0,length-1);
-    printlist(list,length);
     return 0;
 }
 
