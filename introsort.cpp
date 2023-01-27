@@ -1,6 +1,7 @@
 #include <iostream>
-#include<cstdlib>
-#include<concepts>
+#include <cstdlib>
+#include <cmath>
+#include <concepts>
 #include <bits/stdc++.h>
 
 #define QUICKSORT_INSERT_LIMIT 16 
@@ -18,7 +19,7 @@ bool compareto(T* a, T* b) requires order<T>{
 }
 
 // The swap of 2 Elements
-// pointer on the 2 elemntes
+// pointer pointing on the 2 elemntes
 template <typename T>
 void swap(T* a, T* b) requires order<T>{
     T temp = *a;
@@ -44,7 +45,6 @@ void insertionsort(T* list, T* end)requires order<T>{
         i = i+1;
     }
 }
-
 
 // Implementation of Quicksort-3, on very large lists it might be worth is to replace this with Quicksort-9
 // takes: list pointer; first element (prob 0); length of list -1
@@ -119,11 +119,11 @@ void reheap(T* list, int n, int i)requires order<T>{
     int l = 2*i + 1;
     int r = 2*i + 2;
 
-    if (l < n && compareto(list[largest], list[l]) ){
+    if (l < n && compareto(&list[largest], &list[l]) ){
         largest = l;
     }
 
-    if (r < n && compareto( list[largest], list[r]) ){
+    if (r < n && compareto( &list[largest], &list[r]) ){
         largest = r;
     }
     
@@ -152,33 +152,30 @@ void heapsort(T* list, int n)requires order<T>{
     }
 }
 
-
-template <typename T>
-void introsort(T* lo, T* up)requires order<T>{
-    int heaplimit = 2 * log2(up-lo);
-    introsortrun(lo,up,0,heaplimit);
-
-}
-
 template <typename T>
 void introsortrun(T* lo, T* up,int depth,int heaplimit)requires order<T>{
-    if( (up-lo) < quicksortinsertlimit ){
+    if( (up-lo) < QUICKSORT_INSERT_LIMIT ){
         insertionsort(lo, up);
         return;
     }
 
     if( depth > heaplimit ){
-        //heapsort(lo,up-lo);
+        heapsort(lo,up-lo);
         return;
     }
 
     T* pivpos = quicksort3(lo,up);
     if(pivpos != NULL){
-        introsortrun(lo,pivpos,depth+1);
-        introsortrun(pivpos+1,up,depth+1);
+        introsortrun(lo,pivpos,depth+1, heaplimit+1);
+        introsortrun(pivpos+1,up,depth+1, heaplimit+1);
     }
 }
 
+template <typename T>
+void introsort(T* lo, T* up)requires order<T>{
+    int heaplimit = 2 * log2(up-lo);
+    introsortrun(lo,up,0,heaplimit);
+}
 
 template <typename T>
 void printlist(T* list, int length){
@@ -191,22 +188,18 @@ void printlist(T* list, int length){
 
 int main(){
     srand(time(0));
-    int length = 1000;
+    int length = 1000000;
+    int times = 100;
     double list[length];
-    int check = 1;
 
-    for(int x = 0; check == 1; x++){
+    for(int x = 0; x < times; x++){
 
         for(int i = 0; i < length; i++){
-            list[i] = rand()%10000;
+            list[i] = rand()%length;
         }
 
-        check = introsort(list,list+length-1,0);
-        if(check == 0){
-            cout << x << "\n\n\n\n\n";
-            printlist(list,length);
-            break;
-        }
+        introsort(list,list+length-1);
+        cout << x << "\n";
     }
     return 0;
 }
